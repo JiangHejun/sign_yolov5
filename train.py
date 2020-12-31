@@ -2,7 +2,7 @@
 Description: yolov5 train for sign
 Author: Hejun Jiang
 Date: 2020-12-24 15:15:34
-LastEditTime: 2020-12-31 15:25:09
+LastEditTime: 2020-12-31 16:21:46
 LastEditors: Hejun Jiang
 Version: v0.0.1
 Contact: jianghejun@hccl.ioa.ac.cn
@@ -59,14 +59,14 @@ def train(opt, device, tb_writer=None):
         ckpt = torch.load(opt.resume, map_location=device)  # load checkpoint
         if hyp.get('anchors'):
             ckpt['model'].yaml['anchors'] = round(hyp['anchors'])  # force autoanchor
-        model = yolo.Model(opt.cfg or ckpt['model'].yaml, ch=opt.channel, nc=nc).to(device)  # create
+        model = yolo.Model(opt.cfg or ckpt['model'].yaml, ch=3, nc=nc).to(device)  # create
         exclude = ['anchor'] if opt.cfg or hyp.get('anchors') else []  # exclude keys
         state_dict = ckpt['model'].float().state_dict()  # to FP32
         state_dict = torch_utils.intersect_dicts(state_dict, model.state_dict(), exclude=exclude)  # intersect
         model.load_state_dict(state_dict, strict=False)  # load
         logger.info('Transferred %g/%g items from %s' % (len(state_dict), len(model.state_dict()), opt.resume))  # report
     else:  # 没有预先训练的模型
-        model = yolo.Model(opt.cfg, ch=opt.channel, nc=nc).to(device)  # create 导入模型，通道为3
+        model = yolo.Model(opt.cfg, ch=3, nc=nc).to(device)  # create 导入模型，通道为3
 
     nbs = 64  # nominal batch size
     accumulate = max(round(nbs / opt.batch_size), 1)  # accumulate loss before optimizing 最小为1，64/16=4
@@ -299,7 +299,6 @@ if __name__ == '__main__':
     parser.add_argument('--data', type=str, default='data/coco128.yaml', help='data.yaml path')  # 训练数据的配置文件
     parser.add_argument('--hyp', type=str, default='models/hyp.scratch.yaml', help='hyperparameters path')  # 超参配置文件
     parser.add_argument('--epochs', type=int, default=300)  # 迭代轮询次数
-    parser.add_argument('--channel', type=int, default=3, help='the channel of train dataset')  # 用于训练的通道数
     parser.add_argument('--batch-size', type=int, default=64, help='total batch size for all GPUs')  # batchsize
     parser.add_argument('--img-size', type=list, default=[640, 640], help='[train, test] image sizes')  # 训练的图像尺寸，外图像送入之后，自动resize成这个尺寸
     parser.add_argument('--rect', action='store_true', help='rectangular training')  # 是否矩形进行训练，而不是resize
