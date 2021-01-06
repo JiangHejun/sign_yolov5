@@ -1,7 +1,7 @@
 # parameters
 nc: 6  # number of classes
-depth_multiple: 0.30  # model depth multiple
-width_multiple: 0.25  # layer channel multiple
+depth_multiple: 0.05  # model depth multiple
+width_multiple: 0.30  # layer channel multiple
 
 # anchors 二维数组 3*6
 anchors:
