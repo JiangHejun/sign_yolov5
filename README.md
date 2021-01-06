@@ -18,3 +18,8 @@ python train.py --data xx/coco_sign.yaml --device 0
 ```
 python detect.py --source xx/test_sign --weights runs/train/exp/weight/best.pt --conf 0.25
 ```
+
+5. 训练效果如下：
+<p align="center">
+    <img src="./show/sign_11.jpg" width="320"\>
+</p>
