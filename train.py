@@ -2,7 +2,7 @@
 Description: yolov5 train for sign
 Author: Hejun Jiang
 Date: 2020-12-24 15:15:34
-LastEditTime: 2020-12-31 16:21:46
+LastEditTime: 2021-01-08 10:26:25
 LastEditors: Hejun Jiang
 Version: v0.0.1
 Contact: jianghejun@hccl.ioa.ac.cn
@@ -54,9 +54,10 @@ def train(opt, device, tb_writer=None):
     names = data_dict['names']
     assert len(names) == nc, '%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data)  # check 是否相等
 
-    pretrained = opt.resume.endswith('.pt')  # 是否有init 模型，有就为true
+    weight = opt.resume + opt.pretrained if opt.resume or opt.pretrained else ''
+    pretrained = weight.endswith('.pt')  # 是否有init 模型，有就为true
     if pretrained:  # 如果有预先训练的模型
-        ckpt = torch.load(opt.resume, map_location=device)  # load checkpoint
+        ckpt = torch.load(weight, map_location=device)  # load checkpoint
         if hyp.get('anchors'):
             ckpt['model'].yaml['anchors'] = round(hyp['anchors'])  # force autoanchor
         model = yolo.Model(opt.cfg or ckpt['model'].yaml, ch=3, nc=nc).to(device)  # create
@@ -64,7 +65,7 @@ def train(opt, device, tb_writer=None):
         state_dict = ckpt['model'].float().state_dict()  # to FP32
         state_dict = torch_utils.intersect_dicts(state_dict, model.state_dict(), exclude=exclude)  # intersect
         model.load_state_dict(state_dict, strict=False)  # load
-        logger.info('Transferred %g/%g items from %s' % (len(state_dict), len(model.state_dict()), opt.resume))  # report
+        logger.info('Transferred %g/%g items from %s' % (len(state_dict), len(model.state_dict()), weight))  # report
     else:  # 没有预先训练的模型
         model = yolo.Model(opt.cfg, ch=3, nc=nc).to(device)  # create 导入模型，通道为3
 
@@ -110,10 +111,10 @@ def train(opt, device, tb_writer=None):
         # Epochs
         start_epoch = ckpt['epoch'] + 1
         if opt.resume:
-            assert start_epoch > 0, '%s training to %g epochs is finished, nothing to resume.' % (opt.resume, opt.epochs)
+            assert start_epoch > 0, '%s training to %g epochs is finished, nothing to resume.' % (weight, opt.epochs)
         if opt.epochs < start_epoch:
             logger.info('%s has been trained for %g epochs. Fine-tuning for %g additional epochs.' %
-                        (opt.resume, ckpt['epoch'], opt.epochs))
+                        (weight, ckpt['epoch'], opt.epochs))
             opt.epochs += ckpt['epoch']  # finetune additional epochs
 
         del ckpt, state_dict
@@ -295,6 +296,7 @@ def train(opt, device, tb_writer=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--pretrained', type=str, default='', help='initial weight path, pretrained weight')  # 初始化weight, ''则表示无初始化权重
     parser.add_argument('--cfg', type=str, default='models/yolov5ss_sign.yaml', help='model.yaml path')  # 网络模型的配置文件
     parser.add_argument('--data', type=str, default='data/coco128.yaml', help='data.yaml path')  # 训练数据的配置文件
     parser.add_argument('--hyp', type=str, default='models/hyp.scratch.yaml', help='hyperparameters path')  # 超参配置文件
@@ -322,7 +324,7 @@ if __name__ == '__main__':
         resume = opt.resume
         with open(Path(opt.resume).parent.parent / 'opt.yaml') as f:
             opt = argparse.Namespace(**yaml.load(f, Loader=yaml.FullLoader))  # replace
-        opt.resume = resume
+        opt.resume, opt.pretrained = resume, ''
         logger.info('Resuming training from %s' % opt.resume)
     else:
         assert os.path.isfile(opt.data) and os.path.isfile(opt.cfg) and os.path.isfile(opt.hyp), 'ERROR: opt.data, opt.cfg, opt.hyp path error'
